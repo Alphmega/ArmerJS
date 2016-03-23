@@ -1,7 +1,8 @@
-(function(factory){
+(function(factory, window, undefined){
     if (window.define && window.define.amd) window.define('armer', factory);
-    if (window.angular) angular.module('angular.armer', []).service('armer', factory);
-})(function(){
+    else if (window.angular) angular.module('angular.armer', []).service('armer', ['$window', factory]);
+    else window.armer = factory(window)
+})(function(window){
     var emptyObj = {};
     var hasOwn = emptyObj.hasOwnProperty;
 
@@ -365,4 +366,4 @@
             return obj && typeof obj.then == 'function'
         }
     }
-})
+}, window)
