@@ -129,10 +129,13 @@
         if (name.indexOf('[]') > -1 &&  name.indexOf('[]') < name.length - 2) {
             throw Error();
         }
-        name.replace('[]', '[' + arrayKey + ']');
+        name = name.replace('[]', '[' + arrayKey + ']');
+        a = name.replace(/[[\].]$/, '').split(/[[\].]/);
+/*
         name.replace(new RegExp("[a-zA-Z][a-zA-Z0-9]*|" + arrayKey, 'g'), function (i) {
             a.push(i)
         });
+*/
         var key = a.pop();
 
         var i = 0, lastIndex = a.length;
@@ -151,16 +154,12 @@
     }
 
     function baseExtend(target, source, options){
-        var sss = '!@#%';
-        var inputIndex = 0, input = source,
-            inputLength = source.length,
-            key, tmp, obj,
-            value, create = options.create, deep = options.deep, ignore = options.ignore;
+        var sss = '!@#%', create = options.create, deep = options.deep, ignore = options.ignore || [];
         target = target || {};
-        for (; inputIndex < inputLength; inputIndex++) {
-            for (key in input[inputIndex]) {
-                value = input[inputIndex][key];
-                if (!!~ignore.indexOf(key) || !input[inputIndex].hasOwnProperty(key) || value == undefined) continue;
+        each(source, function(item){
+            each(item, function(value, key){
+                var tmp, obj;
+                if (value == undefined) return;
                 if (/[\[\]\.]/.test(key)) {
                     try {
                         tmp =  search(target, key, sss, create);
@@ -176,10 +175,17 @@
                     obj = target
                 }
                 tmp = null;
-
-                if(key == sss && this.isArrayLike(obj)) {
+                if (!!~ignore.indexOf(key)) return;
+                    alert(key);
+                if(isArrayLike(obj)) {
+                    if (key == sss) {
+                        key = obj.length;
+                    }
                     // 处理a[]这种情况下，推进数组
-                    [].push.call(obj, value);
+                    if (!isArrayLike(value)) {
+                        value = [value];
+                    }
+                    [].splice.apply(obj, [key, 0].concat([].slice.call(value)))
                 } else if (typeof value == 'object' && deep) {
                     if (toStringType(value, 'date')) {
                         obj[key] = new Date(value.valueOf());
@@ -199,8 +205,9 @@
                 } else  {
                     obj[key] = value;
                 }
-            }
-        }
+
+            })
+        })
         return target;
 
     }
@@ -250,11 +257,19 @@
         })
     }
     function each(obj, iterator) {
-        for (var i in obj) {
-            if (obj.hasOwnProperty(i)) {
+        var i;
+        if (isArrayLike(obj)) {
+            for (i = 0; i < obj.length; i ++) {
                 if (iterator(obj[i], i) === false) break;
             }
+        } else {
+            for (i in obj) {
+                if (obj.hasOwnProperty(i)) {
+                    if (iterator(obj[i], i) === false) break;
+                }
+            }
         }
+
     }
     function removeWhere(obj, iterator) {
         var that = this;
@@ -310,6 +325,7 @@
         merge: function mixOptions(target) {
             return baseExtend(target, [].slice.call(arguments, 1), {
                 deep: true,
+                create: true,
                 ignore: ['$$hashKey']
             })
         },
