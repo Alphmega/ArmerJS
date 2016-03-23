@@ -2,19 +2,21 @@
     if (window.define && window.define.amd) window.define('armer', factory);
     else if (window.angular) angular.module('angular.armer', []).service('armer', ['$window', factory]);
     else window.armer = factory(window)
+    if (window.$) {
+        window.armer.extend(window.$, widnow.armer);
+    }
 })(function(window){
     var emptyObj = {};
     var hasOwn = emptyObj.hasOwnProperty;
 
     function template(text, data, settings) {
-        var callee = arguments.callee;
-        settings = angular.extend({}, callee.settings, settings);
+        settings = baseExtend({}, template.settings, settings);
 
         // Combine delimiters into one regular expression via alternation.
         var matcher = new RegExp([
-                (settings.escape || callee.noMatch).source,
-                (settings.interpolate || callee.noMatch).source,
-                (settings.evaluate || callee.noMatch).source
+                (settings.escape || template.noMatch).source,
+                (settings.interpolate || template.noMatch).source,
+                (settings.evaluate || template.noMatch).source
             ].join('|') + '|$', 'g');
 
         // Compile the template source, escaping string literals appropriately.
@@ -22,8 +24,8 @@
         var source = "__p+='";
         text.replace(matcher, function (match, escape, interpolate, evaluate, offset) {
             source += text.slice(index, offset)
-                .replace(callee.escaper, function (match) {
-                    return '\\' + callee.escapes[match];
+                .replace(template.escaper, function (match) {
+                    return '\\' + template.escapes[match];
                 });
             source +=
                 escape ? "'+\n((__t=(" + escape + "))==null?'':_.escape(__t))+\n'" :
@@ -48,14 +50,14 @@
         }
 
         if (data) return render(data);
-        var template = function (data) {
+        var templateFunction = function (data) {
             return render.call(this, data);
         };
 
         // Provide the compiled function source as a convenience for precompilation.
-        template.source = 'function(' + (settings.variable || 'obj') + '){\n' + source + '}';
+        templateFunction.source = 'function(' + (settings.variable || 'obj') + '){\n' + source + '}';
 
-        return template;
+        return templateFunction;
     }
     template.escaper = /\\|'|\r|\n|\t|\u2028|\u2029/g;
     template.noMatch = /(.)^/;
@@ -311,8 +313,15 @@
                 ignore: ['$$hashKey']
             })
         },
-        extend: function(){
-            return baseExtend(target, [].slice.call(arguments, 1), {
+        extend: function(target){
+            var source;
+            if (arguments.length > 1) {
+                source = [].slice.call(arguments, 1);
+            } else {
+                source = [].slice.call(arguments);
+                target = this;
+            }
+            return baseExtend(target, source, {
                 ignore: ['$$hashKey']
             })
         },
